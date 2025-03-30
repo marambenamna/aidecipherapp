@@ -47,10 +47,10 @@
 <div v-if="!predictions.length">hmm.....</div>
   </div> <!-- Close the wrapper div -->
 </template>
-
 <script>
 import * as cvstfjs from "customvision-tfjs";
 import labels from "raw-loader!../../public/models/labels.txt";
+
 export default {
   name: 'DetectImage',
   props: {
@@ -60,7 +60,9 @@ export default {
     return {
       image: 0,
       numImages: 16,
-      predictions: [] // Add this line
+      predictions: [],
+      model: null,
+      labels: labels.split("\n").map(e => e.trim()), // Ensure labels are parsed once
     };
   },
   computed: {
@@ -73,40 +75,29 @@ export default {
   },
   async mounted() {
     this.image++;
-    //load up a new model
     this.model = new cvstfjs.ClassificationModel();
     await this.model.loadModelAsync("models/model.json");
-    //parse labels
-    this.labels = labels.split("\n").map(e => {
-      return e.trim();
-    });
-    //run prediction
     this.predict();
   },
   methods: {
     next() {
       this.image++;
-      this.predictions = []; // Clear predictions when moving to the next image
-      setTimeout(this.predict, 500); // Call predict function (not defined yet)
+      this.predictions = [];
+      setTimeout(this.predict, 500);
     },
-    predict() {
-      // Prediction logic goes here
-    }
     async predict() {
-      //execute inference
+      if (!this.$refs.img) return;
       let prediction = await this.model.executeAsync(this.$refs.img);
-      let label = prediction[0];
-      //build up a predictions object by parsing details to labels and probability
-      this.predictions = label.map((p, i) => {
-        return { index: i, label: this.labels[i], probability: p * 100 };
-      });
-    },
+      this.predictions = prediction[0].map((p, i) => ({
+        index: i,
+        label: this.labels[i],
+        probability: p * 100,
+      }));
+    }
   }
 }
-labels: labels,
-model: null,
-predictions: []
 </script>
+
 
 <style scoped>
 h3 {
